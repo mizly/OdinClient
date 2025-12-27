@@ -18,10 +18,12 @@ import net.minecraft.network.protocol.game.ClientboundSetEntityDataPacket
 import net.minecraft.world.entity.player.Player
 import net.minecraft.world.level.block.Block
 import net.minecraft.world.level.block.Blocks
+import starred.skies.odin.utils.Skit
 
 object LividSolver : Module(
     name = "Livid Solver (C)",
-    description = "Provides a visual cue for the correct Livid's location in the boss fight."
+    description = "Provides a visual cue for the correct Livid's location in the boss fight.",
+    category = Skit.CHEATS
 ) {
     private val depthCheck by BooleanSetting("Depth Check", false, desc = "Disable to enable ESP")
     private val woolLocation = BlockPos(5, 108, 43)

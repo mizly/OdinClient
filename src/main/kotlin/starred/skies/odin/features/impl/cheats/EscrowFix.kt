@@ -4,10 +4,12 @@ import com.odtheking.odin.events.ChatPacketEvent
 import com.odtheking.odin.events.core.on
 import com.odtheking.odin.features.Module
 import com.odtheking.odin.utils.sendCommand
+import starred.skies.odin.utils.Skit
 
 object EscrowFix : Module(
     name = "Escrow Fix",
-    description = "Automatically reopens the ah/bz when it gets closed by escrow."
+    description = "Automatically reopens the ah/bz when it gets closed by escrow.",
+    category = Skit.CHEATS
 ) {
     private val messages = mapOf(
         "There was an error with the auction house! (AUCTION_EXPIRED_OR_NOT_FOUND)" to "ah",

@@ -37,7 +37,7 @@ dependencies {
     modRuntimeOnly(libs.devauth)
 
     modImplementation("fabric-api".mc(mc))
-    modImplementation(fletchingTable.modrinth("odin", mc))
+    modImplementation("odin".mc(mc))
     modImplementation(libs.fabric.loader)
     modImplementation(libs.fabric.language.kotlin)
     shadow(libs.commodore)

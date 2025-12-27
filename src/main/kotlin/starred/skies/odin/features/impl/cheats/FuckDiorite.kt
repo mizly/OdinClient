@@ -10,10 +10,12 @@ import com.odtheking.odin.utils.skyblock.dungeon.DungeonUtils
 import com.odtheking.odin.utils.skyblock.dungeon.M7Phases
 import net.minecraft.core.BlockPos
 import net.minecraft.world.level.block.Blocks
+import starred.skies.odin.utils.Skit
 
 object FuckDiorite : Module(
     name = "Fuck Diorite",
-    description = "Replaces the pillars in the storm fight with glass."
+    description = "Replaces the pillars in the storm fight with glass.",
+    category = Skit.CHEATS
 ) {
     private val GLASS_STATE = Blocks.GLASS.defaultBlockState()
 

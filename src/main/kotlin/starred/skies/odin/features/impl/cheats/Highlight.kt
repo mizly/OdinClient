@@ -17,10 +17,12 @@ import net.minecraft.world.entity.boss.wither.WitherBoss
 import net.minecraft.world.entity.decoration.ArmorStand
 import net.minecraft.world.entity.monster.EnderMan
 import net.minecraft.world.entity.player.Player
+import starred.skies.odin.utils.Skit
 
 object Highlight : Module(
     name = "Highlight (C)",
-    description = "Allows you to highlight selected entities."
+    description = "Allows you to highlight selected entities.",
+    category = Skit.CHEATS
 ) {
     private val depthCheck by BooleanSetting("Depth Check", false, desc = "Disable to enable ESP")
     private val highlightStar by BooleanSetting("Highlight Starred Mobs", true, desc = "Highlights starred dungeon mobs.")

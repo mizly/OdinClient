@@ -4,12 +4,13 @@ import com.odtheking.odin.clickgui.settings.impl.BooleanSetting
 import com.odtheking.odin.features.Module
 import net.minecraft.core.BlockPos
 import net.minecraft.world.level.block.entity.SkullBlockEntity
+import starred.skies.odin.utils.Skit
 import java.util.UUID
-import kotlin.jvm.optionals.getOrElse
 
 object SecretHitboxes : Module(
     name = "Secret Hitboxes",
-    description = "Extends the hitboxes of secret blocks to a full block."
+    description = "Extends the hitboxes of secret blocks to a full block.",
+    category = Skit.CHEATS
 ) {
     val lever by BooleanSetting("Lever", false, desc = "Extends the lever hitbox.")
     val button by BooleanSetting("Button", false, desc = "Extends the button hitbox.")

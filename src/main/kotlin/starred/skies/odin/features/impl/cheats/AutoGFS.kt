@@ -12,10 +12,12 @@ import com.odtheking.odin.utils.sendCommand
 import com.odtheking.odin.utils.skyblock.KuudraUtils
 import com.odtheking.odin.utils.skyblock.dungeon.DungeonUtils
 import com.odtheking.odin.utils.skyblock.dungeon.tiles.RoomType
+import starred.skies.odin.utils.Skit
 
 object AutoGFS : Module(
     name = "Auto GFS",
-    description = "Automatically refills certain items from your sacks."
+    description = "Automatically refills certain items from your sacks.",
+    category = Skit.CHEATS
 ) {
     private val inKuudra by BooleanSetting("In Kuudra", true, desc = "Only gfs in Kuudra.")
     private val inDungeon by BooleanSetting("In Dungeon", true, desc = "Only gfs in Dungeons.")

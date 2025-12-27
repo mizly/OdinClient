@@ -14,10 +14,12 @@ import net.minecraft.core.BlockPos
 import net.minecraft.network.protocol.game.ClientboundContainerSetSlotPacket
 import net.minecraft.world.effect.MobEffects
 import net.minecraft.world.level.block.Blocks
+import starred.skies.odin.utils.Skit
 
 object BreakerHelper : Module(
     name = "Breaker Helper",
-    description = "Utilities for Dungeon Breaker."
+    description = "Utilities for Dungeon Breaker.",
+    category = Skit.CHEATS
 ) {
     private val chargesRegex = Regex("Charges: (\\d+)/(\\d+)⸕")
     private var charges = 0

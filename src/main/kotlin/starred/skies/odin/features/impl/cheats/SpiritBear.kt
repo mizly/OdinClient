@@ -20,11 +20,13 @@ import com.odtheking.odin.utils.toFixed
 import net.minecraft.core.BlockPos
 import net.minecraft.world.entity.Entity
 import net.minecraft.world.level.block.Blocks
+import starred.skies.odin.utils.Skit
 import starred.skies.odin.utils.drawTracer
 
 object SpiritBear : Module(
     name = "Spirit Bear (C)",
-    description = "Utilities for Spirit Bear in floor 4."
+    description = "Utilities for Spirit Bear in floor 4.",
+    category = Skit.CHEATS
 ) {
     private val highlightSpirit by BooleanSetting("Highlight Bear", false, desc = "Highlights the spirit bear")
     private val color by ColorSetting("Highlight color", Colors.WHITE, true, desc = "The color of the highlight.").withDependency { highlightSpirit }

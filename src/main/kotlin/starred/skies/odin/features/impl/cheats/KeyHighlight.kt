@@ -15,11 +15,13 @@ import com.odtheking.odin.utils.skyblock.dungeon.DungeonUtils
 import net.minecraft.world.entity.Entity
 import net.minecraft.world.phys.AABB
 import starred.skies.odin.events.EntityMetadataEvent
+import starred.skies.odin.utils.Skit
 import starred.skies.odin.utils.drawTracer
 
 object KeyHighlight : Module(
     name = "Key Highlight (C)",
-    description = "Highlights wither and blood keys in dungeons."
+    description = "Highlights wither and blood keys in dungeons.",
+    category = Skit.CHEATS
 ) {
     private val depthCheck by BooleanSetting("Depth Check", false, desc = "Disable to enable ESP")
     private val announceKeySpawn by BooleanSetting("Announce Key Spawn", true, desc = "Announces when a key is spawned.")

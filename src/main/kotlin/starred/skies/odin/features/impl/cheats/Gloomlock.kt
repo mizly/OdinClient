@@ -7,10 +7,12 @@ import com.odtheking.odin.features.Module
 import com.odtheking.odin.utils.itemId
 import com.odtheking.odin.utils.skyblock.SkyblockPlayer
 import org.lwjgl.glfw.GLFW
+import starred.skies.odin.utils.Skit
 
 object Gloomlock : Module(
     name = "Gloomlock Helper",
-    description = "Stops you from clicking the Gloomlock more than you should."
+    description = "Stops you from clicking the Gloomlock more than you should.",
+    category = Skit.CHEATS
 ) {
     private val blockLeftClick by BooleanSetting("Block Left Click", false, desc = "")
     private val blockRightClick by BooleanSetting("Block Right Click", false, desc = "")
