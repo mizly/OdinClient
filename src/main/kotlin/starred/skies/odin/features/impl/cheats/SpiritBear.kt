@@ -72,11 +72,12 @@ object SpiritBear : Module(
         on<TickEvent.End> {
             if (!DungeonUtils.isFloor(4) || !DungeonUtils.inBoss || !highlightSpirit) return@on
 
-            mc.level?.entitiesForRendering()?.forEach { e ->
-                val entity = e ?: return@forEach
-                if (entity.isInvisible) return@forEach
-                val entityName = entity.name?.string ?: return@forEach
-                if (!entityName.startsWith("spirit bear", true)) return@forEach
+            val entities = mc.level?.entitiesForRendering() ?: return@on
+            for (e in entities) {
+                val entity = e ?: continue
+                if (entity.isInvisible) continue
+                val entityName = entity.name?.string ?: continue
+                if (!entityName.startsWith("spirit bear", true)) continue
 
                 this@SpiritBear.entity = entity
             }

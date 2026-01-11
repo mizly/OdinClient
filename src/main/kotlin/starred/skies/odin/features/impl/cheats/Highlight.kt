@@ -43,27 +43,28 @@ object Highlight : Module(
             if (!highlightStar || !DungeonUtils.inDungeons || DungeonUtils.inBoss) return@on
 
             val entitiesToRemove = mutableListOf<Entity>()
-            mc.level?.entitiesForRendering()?.forEach { e ->
-                val entity = e ?: return@forEach
-                if (!entity.isAlive || entity !is ArmorStand) return@forEach
+            for (e in (mc.level?.entitiesForRendering() ?: return@on)) {
+                val entity = e ?: continue
+                if (!entity.isAlive || entity !is ArmorStand) continue
 
-                val entityName = entity.name?.string ?: return@forEach
-                if (!dungeonMobSpawns.any { it in entityName }) return@forEach
+                val entityName = entity.name?.string ?: continue
+                if (!dungeonMobSpawns.any { it in entityName }) continue
 
                 val isStarred = starredRegex.matches(entityName)
 
                 if (hideNonNames && entity.isInvisible && !isStarred) {
                     entitiesToRemove.add(entity)
-                    return@forEach
+                    continue
                 }
 
-                if (!isStarred) return@forEach
+                if (!isStarred) continue
 
                 mc.level
                     ?.getEntities(entity, entity.boundingBox.move(0.0, -1.0, 0.0)) { isValidEntity(it) }
                     ?.firstOrNull()
                     ?.let { entities.add(it) }
             }
+
             entitiesToRemove.forEach { it.remove(Entity.RemovalReason.DISCARDED) }
             entities.removeIf { entity -> !entity.isAlive }
         }
