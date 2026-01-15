@@ -1,5 +1,6 @@
 package starred.skies.odin
 
+import com.github.stivais.commodore.Commodore
 import com.odtheking.odin.config.ModuleConfig
 import com.odtheking.odin.events.core.EventBus
 import com.odtheking.odin.features.Module
@@ -8,31 +9,40 @@ import com.odtheking.odin.utils.getCenteredText
 import com.odtheking.odin.utils.getChatBreak
 import com.odtheking.odin.utils.modMessage
 import net.fabricmc.api.ClientModInitializer
+import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents
 import net.minecraft.network.chat.ClickEvent
 import net.minecraft.network.chat.Component
 import net.minecraft.network.chat.HoverEvent
 import net.minecraft.network.chat.Style
+import starred.skies.odin.commands.autoSellCommand
 import starred.skies.odin.features.UpdateNotifier
 import starred.skies.odin.features.impl.cheats.*
 import starred.skies.odin.helpers.Scribble
 import java.net.URI
 
 object OdinClient : ClientModInitializer {
+    private val commandsToRegister: Array<Commodore> = arrayOf(autoSellCommand)
+
     private val modulesToRegister: Array<Module> = arrayOf(
         CloseChest, DungeonAbilities, FuckDiorite, SecretHitboxes, BreakerHelper, KeyHighlight, LividSolver, SpiritBear,
-        Highlight, AutoClicker, Gloomlock, EscrowFix, AutoGFS, QueueTerms, AutoTerms, SimonSaysAdditions, Trajectories
+        Highlight, AutoClicker, Gloomlock, EscrowFix, AutoGFS, QueueTerms, AutoTerms, SimonSaysAdditions, Trajectories,
+        AutoSell
     )
 
-    private val moduleConfig: ModuleConfig = ModuleConfig("odinClient")
     private val mainFile: Scribble = Scribble("main")
 
     private var lastInstall: String by mainFile.string("lastInstall")
     private var send: Boolean = true
 
     const val MOD_VERSION: String = /*$ mod_version*/ "0.1.2-r1"
+    val moduleConfig: ModuleConfig = ModuleConfig("odinClient")
 
     override fun onInitializeClient() {
+        ClientCommandRegistrationCallback.EVENT.register { dispatcher, _ ->
+            for (c in commandsToRegister) c.register(dispatcher)
+        }
+
         ModuleManager.registerModules(moduleConfig, *modulesToRegister)
         EventBus.subscribe(UpdateNotifier)
 
