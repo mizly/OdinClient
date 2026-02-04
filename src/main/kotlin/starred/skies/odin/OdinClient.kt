@@ -25,7 +25,7 @@ object OdinClient : ClientModInitializer {
     private val commandsToRegister: Array<Commodore> = arrayOf(autoSellCommand)
 
     private val modulesToRegister: Array<Module> = arrayOf(
-        CloseChest, DungeonAbilities, FuckDiorite, SecretHitboxes, BreakerHelper, KeyHighlight, LividSolver, SpiritBear,
+        CloseChest, DungeonAbilities, FuckDiorite, SecretHitboxes, BreakerHelper, KeyHighlight, LividSolver, SpiritBear, TriggerBot,
         Highlight, AutoClicker, Gloomlock, EscrowFix, AutoGFS, QueueTerms, AutoTerms, Trajectories, AutoSell, SimonSays
     )
 
