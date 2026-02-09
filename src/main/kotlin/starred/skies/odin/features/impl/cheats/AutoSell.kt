@@ -8,6 +8,7 @@ import com.odtheking.odin.utils.handlers.schedule
 import com.odtheking.odin.utils.modMessage
 import com.odtheking.odin.utils.noControlCodes
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen
+import net.minecraft.world.entity.player.Inventory
 import net.minecraft.world.inventory.ClickType
 import starred.skies.odin.OdinClient
 import starred.skies.odin.utils.Skit
@@ -55,14 +56,11 @@ object AutoSell : Module(
         if (!title.equalsOneOf("Trades", "Booster Cookie", "Farm Merchant", "Ophelia")) return
 
         val slots = container.menu.slots
-        if (slots.size < 90) return
-
-        val index = slots
-            .subList(54, 90.coerceAtMost(slots.size))
-            .firstOrNull { slot ->
-                val stack = slot.item
+        val idx = slots.filter { it.container is Inventory }
+            .firstOrNull {
+                val stack = it.item ?: return@firstOrNull false
                 if (stack.isEmpty) return@firstOrNull false
-                stack.hoverName.string.noControlCodes.containsOneOf(sellList, ignoreCase = true)
+                stack.hoverName?.string?.noControlCodes?.containsOneOf(sellList, ignoreCase = true) == true
             }?.index ?: return
 
         val clickType = when (clickType1) {
@@ -72,7 +70,7 @@ object AutoSell : Module(
             else -> ClickType.QUICK_MOVE
         }
 
-        mc.gameMode?.handleInventoryMouseClick(container.menu.containerId, index, 0, clickType, player)
+        mc.gameMode?.handleInventoryMouseClick(container.menu.containerId, idx, 0, clickType, player)
         lastClickTime = currentTime
     }
 

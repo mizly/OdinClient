@@ -10,10 +10,10 @@ import starred.skies.odin.features.impl.cheats.AutoSell.sellList
 
 val autoSellCommand = Commodore("autosell") {
     literal("add").runs { item: GreedyString? ->
-        val lowercase = item?.string?.lowercase() ?: mc.player?.mainHandItem?.displayName?.string?.noControlCodes?.lowercase() ?: return@runs modMessage("Either hold an item or write an item name to be added to autosell.")
+        val lowercase = item?.string?.lowercase() ?: mc.player?.mainHandItem?.hoverName?.string?.noControlCodes?.lowercase() ?: return@runs modMessage("Either hold an item or write an item name to be added to autosell.")
         if (lowercase in sellList) return@runs modMessage("$lowercase is already in the Auto sell list.")
 
-        modMessage("Added $lowercase to the Auto sell list.")
+        modMessage("Added \"$lowercase\" to the Auto sell list.")
         sellList.add(lowercase)
         OdinClient.moduleConfig.save()
     }
@@ -22,7 +22,7 @@ val autoSellCommand = Commodore("autosell") {
         val lowercase = item.string.lowercase()
         if (lowercase !in sellList) return@runs modMessage("$item isn't in the Auto sell list.")
 
-        modMessage("Removed $item from the Auto sell list.")
+        modMessage("Removed \"$item\" from the Auto sell list.")
         sellList.remove(lowercase)
         OdinClient.moduleConfig.save()
     }
