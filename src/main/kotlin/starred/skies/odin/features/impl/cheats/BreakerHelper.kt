@@ -1,6 +1,7 @@
 package starred.skies.odin.features.impl.cheats
 
 import com.odtheking.odin.clickgui.settings.impl.BooleanSetting
+import com.odtheking.odin.events.core.on
 import com.odtheking.odin.events.core.onReceive
 import com.odtheking.odin.features.Module
 import com.odtheking.odin.utils.Colors
@@ -14,6 +15,7 @@ import net.minecraft.core.BlockPos
 import net.minecraft.network.protocol.game.ClientboundContainerSetSlotPacket
 import net.minecraft.world.effect.MobEffects
 import net.minecraft.world.level.block.Blocks
+import starred.skies.odin.events.InteractEvent
 import starred.skies.odin.utils.Skit
 
 object BreakerHelper : Module(
@@ -30,6 +32,8 @@ object BreakerHelper : Module(
         Blocks.COMMAND_BLOCK,
         Blocks.CHAIN_COMMAND_BLOCK,
         Blocks.REPEATING_COMMAND_BLOCK,
+        Blocks.PLAYER_HEAD,
+        Blocks.PLAYER_WALL_HEAD,
         Blocks.SKELETON_SKULL,
         Blocks.SKELETON_WALL_SKULL,
         Blocks.WITHER_SKELETON_SKULL,
@@ -47,6 +51,7 @@ object BreakerHelper : Module(
         Blocks.STONE_BUTTON
     )
 
+    private val preventMiningSecrets by BooleanSetting("Prevent mining secrets", true, desc = "Prevents you from mining blocks classified as secrets.")
     private val onlyWhenFatigue by BooleanSetting("Insta-mine when fatigue", true, desc = "Insta-mine blocks (ZPDB) when mining fatigue is applied.")
     private val hud by HUD("Display charges", "Shows the amount of charges left in your Dungeon Breaker.", true) {
         if (!it && (max == 0 || !DungeonUtils.inDungeons)) 0 to 0
@@ -54,6 +59,19 @@ object BreakerHelper : Module(
     }
 
     init {
+        on<InteractEvent.HitBlock> {
+            if (!preventMiningSecrets) return@on
+            if (!DungeonUtils.inDungeons) return@on
+            if (item.itemId != "DUNGEONBREAKER") return@on
+
+            val state = mc.level?.getBlockState(pos) ?: return@on
+            val block = state.block ?: return@on
+
+            if (block !in blacklistedBlocks && !DungeonUtils.isSecret(state, pos)) return@on
+
+            cancel()
+        }
+
         onReceive<ClientboundContainerSetSlotPacket> {
             if (!DungeonUtils.inDungeons || item?.itemId != "DUNGEONBREAKER") return@onReceive
             item?.loreString?.firstNotNullOfOrNull { chargesRegex.find(it) }?.let { match ->
@@ -72,9 +90,11 @@ object BreakerHelper : Module(
         if (player.mainHandItem.itemId != "DUNGEONBREAKER") return
 
         if ((DungeonUtils.inBoss && !DungeonUtils.isFloor(7)) || DungeonUtils.currentRoom.equalsOneOf(RoomType.PUZZLE, RoomType.FAIRY)) return
+        val state = level.getBlockState(pos) ?: return
 
+        if (DungeonUtils.isSecret(state, pos)) return
         if (!player.hasEffect(MobEffects.MINING_FATIGUE)) return
-        if (level.getBlockState(pos).block in blacklistedBlocks) return
+        if (state.block in blacklistedBlocks) return
 
         level.setBlock(pos, Blocks.AIR.defaultBlockState(), 3)
     }
