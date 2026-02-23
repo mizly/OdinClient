@@ -19,6 +19,7 @@ import com.odtheking.odin.utils.Colors
 import com.odtheking.odin.utils.render.drawStyledBox
 import com.odtheking.odin.utils.skyblock.dungeon.DungeonUtils
 import com.odtheking.odin.utils.skyblock.dungeon.ScanUtils
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientChunkEvents
 import net.minecraft.network.protocol.game.ClientboundMapItemDataPacket
 import net.minecraft.world.phys.AABB
 import starred.skies.odin.utils.Skit
@@ -67,6 +68,15 @@ object DoorESP : Module(
             SpecialColumn.unload()
             MapScanner.unload()
             DungMap.unload()
+        }
+
+        ClientChunkEvents.CHUNK_LOAD.register { _, _ ->
+            if (!enabled) return@register
+            if (!DungeonUtils.inDungeons) return@register
+            if (DungeonUtils.inBoss) return@register
+            if (DungeonMap.enabled) return@register
+
+            DungMap.onChunkLoad()
         }
 
         on<TickEvent.End> {
