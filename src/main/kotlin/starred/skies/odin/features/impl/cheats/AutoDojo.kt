@@ -20,6 +20,7 @@ import net.minecraft.world.phys.AABB
 import net.minecraft.world.phys.Vec3
 import starred.skies.odin.mixin.accessors.InventoryAccessor
 import starred.skies.odin.utils.Skit
+import starred.skies.odin.utils.RotationUtils
 import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.sqrt
@@ -137,9 +138,11 @@ object AutoDojo : Module(
                         block.x.toDouble(), block.y.toDouble(), block.z.toDouble(),
                         block.x + 1.0, block.y + 1.0, block.z + 1.0
                     )
-                    drawStyledBox(aabb, Colors.MINECRAFT_RED, renderStyle, false)
+                drawStyledBox(aabb, Colors.MINECRAFT_RED, renderStyle, false)
                 }
             }
+
+            RotationUtils.update()
         }
     }
 
@@ -148,6 +151,7 @@ object AutoDojo : Module(
         dojoType = DojoType.NONE
         targetSkeleton = null
         masteryBlocks.clear()
+        RotationUtils.reset()
     }
 
     private fun handleControl() {
@@ -260,17 +264,13 @@ object AutoDojo : Module(
             val timeRemaining = closest.expiryTime - now
             val shouldShoot = if (closest.color == "yellow") timeRemaining < 600 else false
 
-            if (shouldShoot) {
-                // Double-check the block still exists before shooting
-                val blockState = level.getBlockState(net.minecraft.core.BlockPos(closest.x, closest.y, closest.z))
-                if (blockState.block == Blocks.YELLOW_WOOL) {
-                    // Release right click to shoot
-                    mc.options.keyUse.setDown(false)
-                    isDrawing = false
-                    firingState = 1
-                    firingTimer = 0
-                    masteryBlocks.removeAt(0)
-                }
+            if (shouldShoot && isDrawing) {
+                // Release right click to shoot
+                mc.options.keyUse.setDown(false)
+                isDrawing = false
+                firingState = 1
+                firingTimer = 0
+                masteryBlocks.removeAt(0)
             }
         }
     }
@@ -366,17 +366,8 @@ object AutoDojo : Module(
     }
 
     private fun setRotation(x: Double, y: Double, z: Double) {
-        val player = mc.player ?: return
-
-        val dx = x - player.x
-        val dy = y - (player.y + player.eyeHeight)
-        val dz = z - player.z
-
-        val yaw = Math.toDegrees(atan2(-dx, dz)).toFloat()
-        val pitch = Math.toDegrees(atan2(-dy, sqrt(dx * dx + dz * dz))).toFloat()
-
-        player.setYRot(yaw)
-        player.setXRot(pitch.coerceIn(-90f, 90f))
+        val rot = RotationUtils.getRotation(x, y, z)
+        RotationUtils.smartSmoothLook(rot.yaw, rot.pitch, 350)
     }
 
     private fun findItemSlot(name: String): Int {
