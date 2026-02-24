@@ -1,6 +1,7 @@
 package starred.skies.odin.features.impl.cheats
 
 import com.odtheking.odin.clickgui.settings.impl.BooleanSetting
+import com.odtheking.odin.clickgui.settings.impl.NumberSetting
 import com.odtheking.odin.clickgui.settings.impl.SelectorSetting
 import com.odtheking.odin.events.ChatPacketEvent
 import com.odtheking.odin.events.RenderEvent
@@ -31,7 +32,9 @@ object AutoDojo : Module(
     category = Skit.CHEATS
 ) {
     private val enableControl by BooleanSetting("Enable Control", true, desc = "Automatically aim at skeleton in Test of Control")
+    private val controlPredictionTicks by NumberSetting("Control Prediction Ticks", 5.0, 1.0, 20.0, 1.0, desc = "How many ticks ahead to predict skeleton movement")
     private val enableMastery by BooleanSetting("Enable Mastery", true, desc = "Automatically shoot blocks in Test of Mastery")
+    private val masteryShootDelay by NumberSetting("Mastery Shoot Delay (ms)", 600.0, 0.0, 2000.0, 50.0, desc = "Time remaining on yellow block before shooting")
     private val enableDiscipline by BooleanSetting("Enable Discipline", true, desc = "Automatically switch swords in Test of Discipline")
     private val renderStyle by SelectorSetting("Render Style", "Filled", listOf("Filled", "Outline", "Filled Outline"), desc = "Style of the box.")
 
@@ -60,20 +63,11 @@ object AutoDojo : Module(
     )
 
     init {
-        println("[AutoDojo] Init block running!")
-        modMessage("§a[AutoDojo] Module initialized!")
     }
 
     override fun onEnable() {
-        println("[AutoDojo] onEnable called!")
-        modMessage("§d[AutoDojo] §fModule enabled! Current dojo type: $dojoType")
-        modMessage("§7[AutoDojo] Settings - Control: $enableControl, Mastery: $enableMastery, Discipline: $enableDiscipline")
-
         // Register event handlers
         registerEventHandlers()
-
-        // Try manually sending a test message to chat
-        modMessage("§6[AutoDojo TEST] If you see this, modMessage works in onEnable")
     }
 
     // Event handlers - these need to be registered when the module is enabled
@@ -86,22 +80,18 @@ object AutoDojo : Module(
                 "Control" in value && ("OBJECTIVE" in value || "objective" in value.replace(Regex("§."), "").replace(Regex("\\s+"), "")) -> {
                     dojoType = DojoType.CONTROL
                     lastSkeletonPos = null
-                    modMessage("§a[AutoDojo] Test of Control detected!")
                 }
                 "Mastery" in value && ("OBJECTIVE" in value || "objective" in value.replace(Regex("§."), "").replace(Regex("\\s+"), "")) -> {
                     dojoType = DojoType.MASTERY
                     selectBow()
-                    modMessage("§a[AutoDojo] Test of Mastery detected!")
                 }
                 "Discipline" in value && ("OBJECTIVE" in value || "objective" in value.replace(Regex("§."), "").replace(Regex("\\s+"), "")) -> {
                     dojoType = DojoType.DISCIPLINE
-                    modMessage("§a[AutoDojo] Test of Discipline detected!")
                 }
                 "Rank:" in value || "rank:" in value.lowercase() -> {
                     dojoType = DojoType.NONE
                     targetSkeleton = null
                     masteryBlocks.clear()
-                    modMessage("§e[AutoDojo] Test ended - resetting state")
                 }
             }
         }
@@ -147,7 +137,6 @@ object AutoDojo : Module(
     }
 
     override fun onDisable() {
-        modMessage("§c[AutoDojo] §fModule disabled!")
         dojoType = DojoType.NONE
         targetSkeleton = null
         masteryBlocks.clear()
@@ -198,10 +187,10 @@ object AutoDojo : Module(
             if (now - lookCooldown > 40) {
                 lookCooldown = now
 
-                // Predict position (5 ticks ahead for X/Z, 2 ticks for Y)
-                val predX = currentPos.x + (skeletonVel.x * 5)
+                // Predict position based on slider preference
+                val predX = currentPos.x + (skeletonVel.x * controlPredictionTicks)
                 val predY = currentPos.y + (skeletonVel.y * 2) + 2.5
-                val predZ = currentPos.z + (skeletonVel.z * 5)
+                val predZ = currentPos.z + (skeletonVel.z * controlPredictionTicks)
 
                 setRotation(predX, predY, predZ)
             }
@@ -260,9 +249,9 @@ object AutoDojo : Module(
                 }
             }
 
-            // Check if we should shoot (yellow blocks: shoot when < 600ms left)
+            // Check if we should shoot (yellow blocks: shoot when < masteryShootDelay left)
             val timeRemaining = closest.expiryTime - now
-            val shouldShoot = if (closest.color == "yellow") timeRemaining < 600 else false
+            val shouldShoot = if (closest.color == "yellow") timeRemaining < masteryShootDelay else false
 
             if (shouldShoot && isDrawing) {
                 // Release right click to shoot
