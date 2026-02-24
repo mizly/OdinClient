@@ -2,7 +2,6 @@ package starred.skies.odin.features.impl.cheats
 
 import com.odtheking.odin.clickgui.settings.impl.BooleanSetting
 import com.odtheking.odin.clickgui.settings.impl.SelectorSetting
-import com.odtheking.odin.clickgui.settings.impl.NumberSetting
 import com.odtheking.odin.events.ChatPacketEvent
 import com.odtheking.odin.events.RenderEvent
 import com.odtheking.odin.events.TickEvent
@@ -31,7 +30,6 @@ object AutoDojo : Module(
     category = Skit.CHEATS
 ) {
     private val enableControl by BooleanSetting("Enable Control", true, desc = "Automatically aim at skeleton in Test of Control")
-    private val controlPrediction by NumberSetting("Control Prediction", 5.0, 1.0, 15.0, 1.0, desc = "Prediction ticks for Test of Control (1-15)")
     private val enableMastery by BooleanSetting("Enable Mastery", true, desc = "Automatically shoot blocks in Test of Mastery")
     private val enableDiscipline by BooleanSetting("Enable Discipline", true, desc = "Automatically switch swords in Test of Discipline")
     private val renderStyle by SelectorSetting("Render Style", "Filled", listOf("Filled", "Outline", "Filled Outline"), desc = "Style of the box.")
@@ -196,11 +194,10 @@ object AutoDojo : Module(
             if (now - lookCooldown > 40) {
                 lookCooldown = now
 
-                // Predict position using slider value for X/Z, 2 ticks for Y
-                val predictionTicks = controlPrediction.toDouble()
-                val predX = currentPos.x + (skeletonVel.x * predictionTicks)
+                // Predict position (5 ticks ahead for X/Z, 2 ticks for Y)
+                val predX = currentPos.x + (skeletonVel.x * 5)
                 val predY = currentPos.y + (skeletonVel.y * 2) + 2.5
-                val predZ = currentPos.z + (skeletonVel.z * predictionTicks)
+                val predZ = currentPos.z + (skeletonVel.z * 5)
 
                 setRotation(predX, predY, predZ)
             }
