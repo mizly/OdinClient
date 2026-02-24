@@ -22,6 +22,7 @@ import net.minecraft.world.phys.Vec3
 import starred.skies.odin.mixin.accessors.InventoryAccessor
 import starred.skies.odin.utils.Skit
 import starred.skies.odin.utils.RotationUtils
+import starred.skies.odin.utils.leftClick
 import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.sqrt
@@ -36,6 +37,7 @@ object AutoDojo : Module(
     private val enableMastery by BooleanSetting("Enable Mastery", true, desc = "Automatically shoot blocks in Test of Mastery")
     private val masteryShootDelay by NumberSetting("Mastery Shoot Delay (ms)", 600.0, 0.0, 2000.0, 50.0, desc = "Time remaining on yellow block before shooting")
     private val enableDiscipline by BooleanSetting("Enable Discipline", true, desc = "Automatically switch swords in Test of Discipline")
+    private val disciplineAutoAttack by BooleanSetting("Discipline Auto Attack", true, desc = "Automatically attack mobs in Test of Discipline")
     private val renderStyle by SelectorSetting("Render Style", "Filled", listOf("Filled", "Outline", "Filled Outline"), desc = "Style of the box.")
 
     private var dojoType = DojoType.NONE
@@ -268,36 +270,40 @@ object AutoDojo : Module(
         val player = mc.player ?: return
         val level = mc.level ?: return
 
-        var targetZombie: Zombie? = null
+        var bestZombie: Zombie? = null
+        var minDistance = 7.0 // Maximum range
         var zombiesFound = 0
 
-        // Find zombie in view cone (15 degree cone, 5 block range)
+        // Find closest zombie in FOV (fixes issues with line-ups)
         for (entity in level.entitiesForRendering()) {
             if (entity is Zombie) {
                 zombiesFound++
-                val dist = player.position().distanceTo(entity.position())
-                if (dist <= 5.0) {
-                    val dx = entity.x - player.x
-                    val dy = entity.y + 1.5 - (player.y + player.eyeHeight)
-                    val dz = entity.z - player.z
+                val dx = entity.x - player.x
+                val dy = (entity.y + 1.2) - (player.y + player.eyeHeight)
+                val dz = entity.z - player.z
+                val dist = sqrt(dx * dx + dy * dy + dz * dz)
 
+                if (dist <= 6.0) {
                     val targetYaw = Math.toDegrees(atan2(-dx, dz)).toFloat()
                     val targetPitch = Math.toDegrees(atan2(-dy, sqrt(dx * dx + dz * dz))).toFloat()
 
                     val yawDiff = abs(normalizeAngle(targetYaw - player.yRot))
                     val pitchDiff = abs(targetPitch - player.xRot)
 
-                    if (yawDiff + pitchDiff < 15) {
-                        targetZombie = entity
-                        break
+                    // FOV Filter: 20° yaw, 35° pitch
+                    if (yawDiff < 20 && pitchDiff < 35) {
+                        // Priority: Pick the one that is physically closest to the player
+                        if (dist < minDistance) {
+                            minDistance = dist
+                            bestZombie = entity
+                        }
                     }
                 }
             }
         }
-
-        if (targetZombie != null) {
+        if (bestZombie != null) {
             // Check helmet to determine sword type
-            val helmet = targetZombie.getItemBySlot(EquipmentSlot.HEAD)
+            val helmet = bestZombie.getItemBySlot(EquipmentSlot.HEAD)
             val helmetName = helmet.item.toString().lowercase()
 
             val targetSword = when {
@@ -311,8 +317,15 @@ object AutoDojo : Module(
             if (targetSword != null) {
                 val swordSlot = findItemSlot(targetSword)
                 if (swordSlot != -1) {
-                    // Use accessor to avoid inventory move detection
-                    (player.inventory as InventoryAccessor).setSelectedSlot(swordSlot)
+                    val inventory = player.inventory as InventoryAccessor
+                    if (inventory.selectedSlot != swordSlot) {
+                        inventory.setSelectedSlot(swordSlot)
+                    }
+                    
+                    // Attack immediately in the same tick if enabled
+                    if (disciplineAutoAttack) {
+                        leftClick()
+                    }
                 }
             }
         }
