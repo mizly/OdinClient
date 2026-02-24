@@ -11,6 +11,7 @@ import com.odtheking.odin.utils.Color
 import com.odtheking.odin.utils.Colors
 import com.odtheking.odin.utils.modMessage
 import com.odtheking.odin.utils.render.drawStyledBox
+import com.odtheking.odin.utils.render.drawText
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientChunkEvents
 import net.minecraft.core.BlockPos
 import net.minecraft.world.level.block.Blocks
@@ -32,6 +33,7 @@ object WorldScanner : Module(
     private val scanDragonNest by BooleanSetting("Scan Dragon Nest", true, desc = "Scans for golden dragon nest")
     private val scanWormFishing by BooleanSetting("Scan Worm Fishing", false, desc = "Scans for worm fishing spots")
     private val renderStyle by SelectorSetting("Render Style", "Outline", listOf("Filled", "Outline", "Filled Outline"), desc = "Style of the box.")
+    private val renderText by BooleanSetting("Render Text", true, desc = "Renders 3D text labels at waypoints")
     private val sendCoordsInChat by BooleanSetting("Send Coords in Chat", true, desc = "Sends coordinates to chat when found")
 
     private val crystalWaypoints = ConcurrentHashMap<String, BlockPos>()
@@ -84,8 +86,11 @@ object WorldScanner : Module(
             if (scanCrystals) {
                 for ((name, pos) in crystalWaypoints) {
                     val color = getColorFromName(name)
+                    val centerPos = Vec3.atCenterOf(pos)
                     val aabb = AABB.unitCubeFromLowerCorner(Vec3.atLowerCornerOf(pos))
+
                     drawStyledBox(aabb, color, renderStyle, false)
+                    if (renderText) drawText(name, centerPos.add(0.0, 1.5, 0.0), 1.0f, false)
                 }
             }
 
@@ -93,32 +98,44 @@ object WorldScanner : Module(
             if (scanMobSpots) {
                 for ((name, pos) in mobSpotWaypoints) {
                     val color = getColorFromName(name)
+                    val centerPos = Vec3.atCenterOf(pos)
                     val aabb = AABB.unitCubeFromLowerCorner(Vec3.atLowerCornerOf(pos))
+
                     drawStyledBox(aabb, color, renderStyle, false)
+                    if (renderText) drawText(name, centerPos.add(0.0, 1.5, 0.0), 1.0f, false)
                 }
             }
 
             // Render fairy grottos
             if (scanFairyGrottos) {
                 for (pos in fairyGrottos.keys) {
+                    val centerPos = Vec3.atCenterOf(pos)
                     val aabb = AABB.unitCubeFromLowerCorner(Vec3.atLowerCornerOf(pos))
+
                     drawStyledBox(aabb, Colors.MINECRAFT_LIGHT_PURPLE, renderStyle, false)
+                    if (renderText) drawText("§dFairy Grotto", centerPos.add(0.0, 1.5, 0.0), 1.0f, false)
                 }
             }
 
             // Render dragon nests
             if (scanDragonNest) {
                 for (pos in dragonNests.keys) {
+                    val centerPos = Vec3.atCenterOf(pos)
                     val aabb = AABB.unitCubeFromLowerCorner(Vec3.atLowerCornerOf(pos))
+
                     drawStyledBox(aabb, Colors.MINECRAFT_GOLD, renderStyle, false)
+                    if (renderText) drawText("§6Dragon Nest", centerPos.add(0.0, 1.5, 0.0), 1.0f, false)
                 }
             }
 
             // Render worm fishing spots
             if (scanWormFishing) {
                 for (pos in wormFishing.keys) {
+                    val centerPos = Vec3.atCenterOf(pos)
                     val aabb = AABB.unitCubeFromLowerCorner(Vec3.atLowerCornerOf(pos))
+
                     drawStyledBox(aabb, Colors.MINECRAFT_GOLD, renderStyle, false)
+                    if (renderText) drawText("§6Worm Fishing", centerPos.add(0.0, 1.5, 0.0), 1.0f, false)
                 }
             }
         }
