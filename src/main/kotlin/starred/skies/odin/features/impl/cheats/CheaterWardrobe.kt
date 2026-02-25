@@ -1,6 +1,7 @@
 package starred.skies.odin.features.impl.cheats
 
 import com.mojang.blaze3d.platform.InputConstants
+import com.odtheking.odin.clickgui.settings.impl.BooleanSetting
 import com.odtheking.odin.clickgui.settings.impl.KeybindSetting
 import com.odtheking.odin.events.TickEvent
 import com.odtheking.odin.events.core.on
@@ -14,6 +15,7 @@ import com.odtheking.odin.utils.sendCommand
 import net.minecraft.network.protocol.game.ClientboundOpenScreenPacket
 import net.minecraft.world.inventory.ClickType
 import org.lwjgl.glfw.GLFW
+import starred.skies.odin.mixin.accessors.KeyMappingAccessor
 import starred.skies.odin.utils.Skit
 
 object CheaterWardrobe : Module(
@@ -33,6 +35,14 @@ object CheaterWardrobe : Module(
 
     private val slots = listOf(slot1, slot2, slot3, slot4, slot5, slot6, slot7, slot8, slot9)
     private val wasPressed = BooleanArray(9)
+
+    // Hypixel only checks for inventory walk on container clicks.
+    // Therefore, by only moving when not clicking, we can bypass the check!
+    // Enabling this bypasses that safety: the swap may fire while moving, which Hypixel CAN detect.
+    private val enabledWhileMoving by BooleanSetting(
+        "Enabled While Moving", false,
+        desc = "Use at your own risk!"
+    )
 
     private var pendingSlotIndex = -1
     private var currentSlot = -1
@@ -58,6 +68,14 @@ object CheaterWardrobe : Module(
             for (i in slots.indices) {
                 val currentlyPressed = slots[i].value.isPressed()
                 if (currentlyPressed && !wasPressed[i] && !isSwapping) {
+                    // If "Enabled While Moving" is off, wait until the player is stationary.
+                    // This mirrors the InventoryWalk bypass: Hypixel only flags inventory clicks
+                    // that occur during movement, so we avoid triggering while moving.
+                    val isMoving = isPlayerMoving()
+                    if (!enabledWhileMoving && isMoving) {
+                        wasPressed[i] = currentlyPressed
+                        continue
+                    }
                     pendingSlotIndex = 36 + i
                     currentSlot = i + 1
                     isSwapping = true
@@ -116,6 +134,20 @@ object CheaterWardrobe : Module(
         currentContainerId = -1
         pendingSlotIndex = -1
         currentSlot = -1
+    }
+
+    private fun isPlayerMoving(): Boolean {
+        val w = mc.window
+        return listOf(
+            mc.options.keyUp,
+            mc.options.keyLeft,
+            mc.options.keyRight,
+            mc.options.keyDown
+        ).any { key ->
+            val v = (key as KeyMappingAccessor).boundKey.value
+            if (v > 7) InputConstants.isKeyDown(w, v)
+            else GLFW.glfwGetMouseButton(w.handle(), v) == GLFW.GLFW_PRESS
+        }
     }
 
     private fun InputConstants.Key.isPressed(): Boolean {
