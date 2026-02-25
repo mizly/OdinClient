@@ -9,13 +9,17 @@ import com.odtheking.odin.events.TickEvent
 import com.odtheking.odin.events.core.on
 import com.odtheking.odin.features.Module
 import com.odtheking.odin.utils.Colors
-import com.odtheking.odin.utils.modMessage
 import com.odtheking.odin.utils.render.drawStyledBox
+import com.odtheking.odin.utils.renderBoundingBox
+import net.minecraft.core.BlockPos
+import net.minecraft.world.entity.Entity
 import net.minecraft.world.entity.EntityType
 import net.minecraft.world.entity.EquipmentSlot
 import net.minecraft.world.entity.monster.Skeleton
 import net.minecraft.world.entity.monster.WitherSkeleton
 import net.minecraft.world.entity.monster.Zombie
+import net.minecraft.world.item.Item
+import net.minecraft.world.item.Items
 import net.minecraft.world.level.block.Blocks
 import net.minecraft.world.phys.AABB
 import net.minecraft.world.phys.Vec3
@@ -41,7 +45,7 @@ object AutoDojo : Module(
     private val renderStyle by SelectorSetting("Render Style", "Filled", listOf("Filled", "Outline", "Filled Outline"), desc = "Style of the box.")
 
     private var dojoType = DojoType.NONE
-    private var targetSkeleton: net.minecraft.world.entity.Entity? = null  // Changed to Entity type
+    private var targetSkeleton: Entity? = null
     private var lookCooldown = 0L
     private var lastSkeletonPos: Vec3? = null
     private var skeletonVel = Vec3.ZERO
@@ -65,41 +69,37 @@ object AutoDojo : Module(
     )
 
     init {
-    }
-
-    override fun onEnable() {
-        // Register event handlers
-        registerEventHandlers()
-    }
-
-    // Event handlers - these need to be registered when the module is enabled
-    private fun registerEventHandlers() {
         on<ChatPacketEvent> {
-            if (!enabled) return@on
+            val text = value.lowercase()
 
-            // Try multiple detection patterns
+            if ("rank:" in text) {
+                dojoType = DojoType.NONE
+                targetSkeleton = null
+                masteryBlocks.clear()
+                return@on
+            }
+
+            if ("objective" !in text) return@on
+
             when {
-                "Control" in value && ("OBJECTIVE" in value || "objective" in value.replace(Regex("§."), "").replace(Regex("\\s+"), "")) -> {
+                "control" in text -> {
                     dojoType = DojoType.CONTROL
                     lastSkeletonPos = null
                 }
-                "Mastery" in value && ("OBJECTIVE" in value || "objective" in value.replace(Regex("§."), "").replace(Regex("\\s+"), "")) -> {
+
+                "mastery" in text -> {
                     dojoType = DojoType.MASTERY
                     selectBow()
                 }
-                "Discipline" in value && ("OBJECTIVE" in value || "objective" in value.replace(Regex("§."), "").replace(Regex("\\s+"), "")) -> {
+
+                "discipline" in text -> {
                     dojoType = DojoType.DISCIPLINE
-                }
-                "Rank:" in value || "rank:" in value.lowercase() -> {
-                    dojoType = DojoType.NONE
-                    targetSkeleton = null
-                    masteryBlocks.clear()
                 }
             }
         }
 
         on<TickEvent.End> {
-            if (!enabled || dojoType == DojoType.NONE) return@on
+            if (dojoType == DojoType.NONE) return@on
 
             when (dojoType) {
                 DojoType.CONTROL -> if (enableControl) handleControl()
@@ -110,27 +110,19 @@ object AutoDojo : Module(
         }
 
         on<RenderEvent.Extract> {
-            if (!enabled || dojoType == DojoType.NONE) return@on
+            if (dojoType == DojoType.NONE) return@on
 
             // Render control target
             if (dojoType == DojoType.CONTROL && targetSkeleton != null) {
                 val entity = targetSkeleton!!
-                val pos = entity.position()
-                val aabb = AABB(
-                    pos.x - 0.5, pos.y, pos.z - 0.5,
-                    pos.x + 0.5, pos.y + 2.0, pos.z + 0.5
-                )
-                drawStyledBox(aabb, Colors.MINECRAFT_AQUA, renderStyle, false)
+                drawStyledBox(entity.renderBoundingBox, Colors.MINECRAFT_AQUA, renderStyle, false)
             }
 
             // Render mastery blocks
             if (dojoType == DojoType.MASTERY) {
                 for (block in masteryBlocks) {
-                    val aabb = AABB(
-                        block.x.toDouble(), block.y.toDouble(), block.z.toDouble(),
-                        block.x + 1.0, block.y + 1.0, block.z + 1.0
-                    )
-                drawStyledBox(aabb, Colors.MINECRAFT_RED, renderStyle, false)
+                    val aabb = AABB(block.x.toDouble(), block.y.toDouble(), block.z.toDouble(), block.x + 1.0, block.y + 1.0, block.z + 1.0)
+                    drawStyledBox(aabb, Colors.MINECRAFT_RED, renderStyle, false)
                 }
             }
 
@@ -149,7 +141,7 @@ object AutoDojo : Module(
         val player = mc.player ?: return
         val level = mc.level ?: return
 
-        var closestSkeleton: net.minecraft.world.entity.Entity? = null  // Changed to Entity type
+        var closestSkeleton: Entity? = null
         var minDist = 25.0
         var skeletonsFound = 0
 
@@ -157,46 +149,31 @@ object AutoDojo : Module(
         for (entity in level.entitiesForRendering()) {
             if (entity is WitherSkeleton || (entity is Skeleton && entity.type == EntityType.WITHER_SKELETON)) {
                 skeletonsFound++
-                val skeleton = entity
+                if (entity.getItemBySlot(EquipmentSlot.HEAD).item == Items.REDSTONE_BLOCK) continue
 
-                // Check if it's a decoy (redstone helmet)
-                val helmet = skeleton.getItemBySlot(EquipmentSlot.HEAD)
-                val helmetName = helmet.item.toString().lowercase()
-                if (helmetName.contains("redstone")) {
-                    continue
-                }
+                val dist = player.position().distanceTo(entity.position())
+                if (dist >= minDist) continue
 
-                val dist = player.position().distanceTo(skeleton.position())
-                if (dist < minDist) {
-                    minDist = dist
-                    closestSkeleton = skeleton  // No casting needed - assign directly
-                }
+                minDist = dist
+                closestSkeleton = entity
             }
         }
 
+        targetSkeleton = closestSkeleton ?: return
 
-        targetSkeleton = closestSkeleton
+        val currentPos = closestSkeleton.position()
+        if (lastSkeletonPos != null) skeletonVel = currentPos.subtract(lastSkeletonPos!!)
+        lastSkeletonPos = currentPos
 
-        if (closestSkeleton != null) {
-            // Calculate velocity for prediction
-            val currentPos = closestSkeleton.position()
-            if (lastSkeletonPos != null) {
-                skeletonVel = currentPos.subtract(lastSkeletonPos!!)
-            }
-            lastSkeletonPos = currentPos
+        val now = System.currentTimeMillis()
+        if (now - lookCooldown <= 40) return
+        lookCooldown = now
 
-            val now = System.currentTimeMillis()
-            if (now - lookCooldown > 40) {
-                lookCooldown = now
-
-                // Predict position based on slider preference
-                val predX = currentPos.x + (skeletonVel.x * controlPredictionTicks)
-                val predY = currentPos.y + (skeletonVel.y * 2) + 2.5
-                val predZ = currentPos.z + (skeletonVel.z * controlPredictionTicks)
-
-                setRotation(predX, predY, predZ)
-            }
-        }
+        // Predict position based on slider preference
+        val predX = currentPos.x + (skeletonVel.x * controlPredictionTicks)
+        val predY = currentPos.y + (skeletonVel.y * 2) + 2.5
+        val predZ = currentPos.z + (skeletonVel.z * controlPredictionTicks)
+        setRotation(predX, predY, predZ)
     }
 
     private fun handleMastery() {
@@ -206,64 +183,49 @@ object AutoDojo : Module(
 
         // Clean up expired blocks and verify blocks still exist
         masteryBlocks.removeAll { block ->
-            // Remove expired blocks
-            if (block.expiryTime < now) {
-                return@removeAll true
-            }
-            // Remove blocks that no longer exist (were already shot)
-            val blockState = level.getBlockState(net.minecraft.core.BlockPos(block.x, block.y, block.z))
-            if (blockState.block != Blocks.YELLOW_WOOL) {
-                return@removeAll true
-            }
-            false
+            if (block.expiryTime < now) return@removeAll true
+
+            val state = level.getBlockState(BlockPos(block.x, block.y, block.z))
+            state?.block != Blocks.YELLOW_WOOL
         }
 
         // Handle redrawing sequence (2 ticks delay)
         if (firingState == 1) {
             firingTimer++
-            if (firingTimer >= 2) {
-                // Hold right click to draw bow back
-                mc.options.keyUse.setDown(true)
-                isDrawing = true
-                firingState = 0
-                firingTimer = 0
-            }
+            if (firingTimer < 2) return
+
+            mc.options.keyUse.isDown = true
+            isDrawing = true
+            firingState = 0
+            firingTimer = 0
+            return
         }
 
         // Scan for yellow wool blocks
         scanForMasteryBlocks()
+        val closest = masteryBlocks.firstOrNull() ?: return
 
-        if (masteryBlocks.isNotEmpty()) {
-            val closest = masteryBlocks[0]
+        setRotation(closest.x + 0.5, closest.y + 1.1, closest.z + 0.5)
 
-            // Pre-rotate to target (aim 1.1 blocks higher to compensate for drop)
-            setRotation(closest.x + 0.5, closest.y + 1.1, closest.z + 0.5)
+        val bowSlot = findItemSlot(Items.BOW) ?: return
+        (player.inventory as InventoryAccessor).setSelectedSlot(bowSlot)
 
-            // Ensure bow is held and drawn
-            val bowSlot = findItemSlot("bow")
-            if (bowSlot != -1) {
-                // Switch to bow slot using accessor to avoid private field access
-                (player.inventory as InventoryAccessor).setSelectedSlot(bowSlot)
-                if (firingState == 0 && !isDrawing) {
-                    // Hold right click to draw bow back
-                    mc.options.keyUse.setDown(true)
-                    isDrawing = true
-                }
-            }
-
-            // Check if we should shoot (yellow blocks: shoot when < masteryShootDelay left)
-            val timeRemaining = closest.expiryTime - now
-            val shouldShoot = if (closest.color == "yellow") timeRemaining < masteryShootDelay else false
-
-            if (shouldShoot && isDrawing) {
-                // Release right click to shoot
-                mc.options.keyUse.setDown(false)
-                isDrawing = false
-                firingState = 1
-                firingTimer = 0
-                masteryBlocks.removeAt(0)
-            }
+        if (!isDrawing) {
+            mc.options.keyUse.isDown = true
+            isDrawing = true
         }
+
+        if (closest.color != "yellow") return
+
+        val timeRemaining = closest.expiryTime - now
+        if (timeRemaining >= masteryShootDelay) return
+        if (!isDrawing) return
+
+        mc.options.keyUse.isDown = false
+        isDrawing = false
+        firingState = 1
+        firingTimer = 0
+        masteryBlocks.removeAt(0)
     }
 
     private fun handleDiscipline() {
@@ -276,59 +238,43 @@ object AutoDojo : Module(
 
         // Find closest zombie in FOV (fixes issues with line-ups)
         for (entity in level.entitiesForRendering()) {
-            if (entity is Zombie) {
-                zombiesFound++
-                val dx = entity.x - player.x
-                val dy = (entity.y + 1.2) - (player.y + player.eyeHeight)
-                val dz = entity.z - player.z
-                val dist = sqrt(dx * dx + dy * dy + dz * dz)
+            if (entity !is Zombie) continue
+            zombiesFound++
 
-                if (dist <= 6.0) {
-                    val targetYaw = Math.toDegrees(atan2(-dx, dz)).toFloat()
-                    val targetPitch = Math.toDegrees(atan2(-dy, sqrt(dx * dx + dz * dz))).toFloat()
+            val dx = entity.x - player.x
+            val dy = (entity.y + 1.2) - (player.y + player.eyeHeight)
+            val dz = entity.z - player.z
+            val dist = sqrt(dx * dx + dy * dy + dz * dz)
 
-                    val yawDiff = abs(normalizeAngle(targetYaw - player.yRot))
-                    val pitchDiff = abs(targetPitch - player.xRot)
+            if (dist > 6.0) continue
+            val targetYaw = Math.toDegrees(atan2(-dx, dz)).toFloat()
+            val targetPitch = Math.toDegrees(atan2(-dy, sqrt(dx * dx + dz * dz))).toFloat()
 
-                    // FOV Filter: 20° yaw, 35° pitch
-                    if (yawDiff < 20 && pitchDiff < 35) {
-                        // Priority: Pick the one that is physically closest to the player
-                        if (dist < minDistance) {
-                            minDistance = dist
-                            bestZombie = entity
-                        }
-                    }
-                }
-            }
+            val yawDiff = abs(normalizeAngle(targetYaw - player.yRot))
+            val pitchDiff = abs(targetPitch - player.xRot)
+
+            if (yawDiff >= 20 || pitchDiff >= 35) continue
+            if (dist >= minDistance) continue
+
+            minDistance = dist
+            bestZombie = entity
         }
-        if (bestZombie != null) {
-            // Check helmet to determine sword type
-            val helmet = bestZombie.getItemBySlot(EquipmentSlot.HEAD)
-            val helmetName = helmet.item.toString().lowercase()
 
-            val targetSword = when {
-                "leather" in helmetName -> "wooden_sword"
-                "iron" in helmetName -> "iron_sword"
-                "gold" in helmetName -> "golden_sword"
-                "diamond" in helmetName -> "diamond_sword"
-                else -> null
-            }
-
-            if (targetSword != null) {
-                val swordSlot = findItemSlot(targetSword)
-                if (swordSlot != -1) {
-                    val inventory = player.inventory as InventoryAccessor
-                    if (inventory.selectedSlot != swordSlot) {
-                        inventory.setSelectedSlot(swordSlot)
-                    }
-                    
-                    // Attack immediately in the same tick if enabled
-                    if (disciplineAutoAttack) {
-                        leftClick()
-                    }
-                }
-            }
+        if (bestZombie == null) return
+        // Check helmet to determine sword type
+        val helmet = bestZombie.getItemBySlot(EquipmentSlot.HEAD).item
+        val targetSword = when (helmet) {
+            Items.LEATHER_HELMET -> Items.WOODEN_SWORD
+            Items.IRON_HELMET -> Items.IRON_SWORD
+            Items.GOLDEN_HELMET -> Items.GOLDEN_SWORD
+            Items.DIAMOND_HELMET -> Items.DIAMOND_SWORD
+            else -> return
         }
+
+        val swordSlot = findItemSlot(targetSword) ?: return
+        val inventory = player.inventory as InventoryAccessor
+        if (inventory.selectedSlot != swordSlot) inventory.setSelectedSlot(swordSlot)
+        if (disciplineAutoAttack) leftClick()
     }
 
     private fun scanForMasteryBlocks() {
@@ -344,24 +290,10 @@ object AutoDojo : Module(
                     val pos = playerPos.offset(x, y, z)
                     val dist = sqrt((x * x + z * z).toDouble())
                     if (dist > 25) continue
+                    if (level.getBlockState(pos)?.block != Blocks.YELLOW_WOOL) continue
 
-                    val blockState = level.getBlockState(pos)
-                    if (blockState.block == Blocks.YELLOW_WOOL) {
-                        // Check if already in queue
-                        val isDuplicate = masteryBlocks.any {
-                            it.x == pos.x && it.z == pos.z && it.color == "yellow"
-                        }
-
-                        if (!isDuplicate) {
-                            masteryBlocks.add(
-                                MasteryBlock(
-                                    pos.x, pos.y, pos.z,
-                                    "yellow",
-                                    now + 3500 // 3.5s lifespan
-                                )
-                            )
-                        }
-                    }
+                    val isDuplicate = masteryBlocks.any { it.x == pos.x && it.z == pos.z && it.color == "yellow" }
+                    if (!isDuplicate) masteryBlocks.add(MasteryBlock(pos.x, pos.y, pos.z, "yellow", now + 3500))
                 }
             }
         }
@@ -372,27 +304,16 @@ object AutoDojo : Module(
         RotationUtils.smartSmoothLook(rot.yaw, rot.pitch, 350)
     }
 
-    private fun findItemSlot(name: String): Int {
-        val player = mc.player ?: return -1
-        for (i in 0..8) {
-            val stack = player.inventory.getItem(i)
-            if (!stack.isEmpty) {
-                val itemName = stack.item.toString().lowercase()
-                if (name.lowercase() in itemName) {
-                    return i
-                }
-            }
-        }
-        return -1
+    private fun findItemSlot(it: Item): Int? {
+        val player = mc.player ?: return null
+        for (i in 0..8) if (player.inventory.getItem(i)?.item  == it) return i
+        return null
     }
 
     private fun selectBow() {
         val player = mc.player ?: return
-        val bowSlot = findItemSlot("bow")
-        if (bowSlot != -1) {
-            // Use accessor to avoid private field access
-            (player.inventory as InventoryAccessor).setSelectedSlot(bowSlot)
-        }
+        val bowSlot = findItemSlot(Items.BOW) ?: return
+        (player.inventory as InventoryAccessor).setSelectedSlot(bowSlot)
     }
 
     private fun normalizeAngle(angle: Float): Float {
