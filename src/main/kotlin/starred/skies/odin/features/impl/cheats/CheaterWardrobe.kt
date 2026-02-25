@@ -6,8 +6,10 @@ import com.odtheking.odin.events.TickEvent
 import com.odtheking.odin.events.core.on
 import com.odtheking.odin.events.core.onReceive
 import com.odtheking.odin.features.Module
+import com.odtheking.odin.utils.Colors
 import com.odtheking.odin.utils.itemId
 import com.odtheking.odin.utils.noControlCodes
+import com.odtheking.odin.utils.render.textDim
 import com.odtheking.odin.utils.sendCommand
 import net.minecraft.network.protocol.game.ClientboundOpenScreenPacket
 import net.minecraft.world.inventory.ClickType
@@ -33,9 +35,15 @@ object CheaterWardrobe : Module(
     private val wasPressed = BooleanArray(9)
 
     private var pendingSlotIndex = -1
+    private var currentSlot = -1
     private var isSwapping = false
     private var currentContainerId = -1
     private var startTime = 0L
+
+    private val hud by HUD("Equip Message", "Shows the current wardrobe slot being equipped.", true) { example ->
+        if (!example && !isSwapping) return@HUD 0 to 0
+        textDim("§fEquipping wardrobe slot §b#${if (example) 1 else currentSlot}", 0, 0, Colors.WHITE)
+    }
 
     init {
         slots.forEach { this.registerSetting(it) }
@@ -51,6 +59,7 @@ object CheaterWardrobe : Module(
                 val currentlyPressed = slots[i].value.isPressed()
                 if (currentlyPressed && !wasPressed[i] && !isSwapping) {
                     pendingSlotIndex = 36 + i
+                    currentSlot = i + 1
                     isSwapping = true
                     currentContainerId = -1
                     startTime = System.currentTimeMillis()
@@ -106,6 +115,7 @@ object CheaterWardrobe : Module(
         isSwapping = false
         currentContainerId = -1
         pendingSlotIndex = -1
+        currentSlot = -1
     }
 
     private fun InputConstants.Key.isPressed(): Boolean {
