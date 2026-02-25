@@ -12,6 +12,7 @@ import com.odtheking.odin.events.core.on
 import com.odtheking.odin.features.Module
 import com.odtheking.odin.utils.Color
 import com.odtheking.odin.utils.Colors
+import com.odtheking.odin.utils.noControlCodes
 import com.odtheking.odin.utils.render.drawStyledBox
 import com.odtheking.odin.utils.renderBoundingBox
 import com.odtheking.odin.utils.skyblock.dungeon.DungeonUtils
@@ -61,7 +62,7 @@ object Highlight : Module(
             for (stand in world.entitiesForRendering()) {
                 if (stand !is ArmorStand || !stand.isAlive) continue
 
-                val rawName = stand.name?.string ?: continue
+                val rawName = stand.displayName?.string?.noControlCodes?.takeIf { !it.equals("armor stand", true)} ?: continue
                 val nameLower = rawName.lowercase()
 
                 if (bool && dungeonMobSpawns.any(rawName::contains)) {
@@ -99,7 +100,7 @@ object Highlight : Module(
     }
 
     private fun ArmorStand.fn(): Entity? =
-        mc.level?.getEntities(this, boundingBox.move(0.0, -1.0, 0.0), ::isValidEntity)?.firstOrNull()
+        mc.level?.getEntities(this, boundingBox.inflate(0.0, 1.0, 0.0), ::isValidEntity)?.firstOrNull() ?: mc.level?.getEntity(id - 1)?.takeIf { isValidEntity(it) }
 
     private fun isValidEntity(entity: Entity): Boolean =
         when (entity) {
