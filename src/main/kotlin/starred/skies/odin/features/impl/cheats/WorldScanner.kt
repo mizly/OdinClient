@@ -3,7 +3,6 @@ package starred.skies.odin.features.impl.cheats
 import com.odtheking.odin.clickgui.settings.impl.BooleanSetting
 import com.odtheking.odin.clickgui.settings.impl.SelectorSetting
 import com.odtheking.odin.events.RenderEvent
-import com.odtheking.odin.events.TickEvent
 import com.odtheking.odin.events.WorldEvent
 import com.odtheking.odin.events.core.on
 import com.odtheking.odin.features.Module
@@ -12,6 +11,8 @@ import com.odtheking.odin.utils.Colors
 import com.odtheking.odin.utils.modMessage
 import com.odtheking.odin.utils.render.drawStyledBox
 import com.odtheking.odin.utils.render.drawText
+import com.odtheking.odin.utils.skyblock.Island
+import com.odtheking.odin.utils.skyblock.LocationUtils
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientChunkEvents
 import net.minecraft.core.BlockPos
 import net.minecraft.world.level.block.Block
@@ -21,7 +22,6 @@ import net.minecraft.world.level.chunk.LevelChunk
 import net.minecraft.world.phys.AABB
 import net.minecraft.world.phys.Vec3
 import starred.skies.odin.utils.Skit
-import starred.skies.odin.utils.TabListUtils
 import com.odtheking.odin.OdinMod.mc
 import java.util.concurrent.ConcurrentHashMap
 
@@ -43,9 +43,6 @@ object WorldScanner : Module(
     data class WaypointData(val pos: BlockPos, val category: Int, val color: Color)
 
     private val scannedChunks = HashSet<Long>()
-    private var cooldown = 100
-    private var initialScan = false
-    private var inCH = false
 
     private enum class Quarter {
         NUCLEUS, JUNGLE, PRECURSOR, GOBLIN, MITHRIL, MAGMA, ANY;
@@ -92,27 +89,8 @@ object WorldScanner : Module(
     }
 
     init {
-        on<TickEvent.End> {
-            if (mc.level == null || mc.player == null) return@on
-            val currentlyInCH = TabListUtils.tabListContains("Area: Crystal Hollows")
-            if (inCH && !currentlyInCH) clearWaypoints()
-            inCH = currentlyInCH
-
-            if (!inCH) return@on
-
-            if (cooldown > 0) {
-                cooldown--
-                return@on
-            }
-
-            if (cooldown == 0 && !initialScan) {
-                initialScan = true
-                initialScanCH()
-            }
-        }
-
         ClientChunkEvents.CHUNK_LOAD.register { _, chunk ->
-            if (!enabled || !inCH || cooldown > 0) return@register
+            if (!enabled || !LocationUtils.isCurrentArea(Island.CrystalHollows)) return@register
             val chunkKey = getChunkKey(chunk)
             if (!scannedChunks.contains(chunkKey)) {
                 handleChunkLoad(chunk)
@@ -122,11 +100,10 @@ object WorldScanner : Module(
 
         on<WorldEvent.Load> {
             clearWaypoints()
-            cooldown = 80
         }
 
         on<RenderEvent.Extract> {
-            if (!inCH || cooldown > 0) return@on
+            if (!LocationUtils.isCurrentArea(Island.CrystalHollows)) return@on
 
             for ((name, data) in waypoints) {
                 val shouldRender = when (data.category) {
@@ -161,12 +138,8 @@ object WorldScanner : Module(
     private fun clearWaypoints() {
         waypoints.clear()
         scannedChunks.clear()
-        initialScan = false
     }
 
-    private fun initialScanCH() {
-        modMessage("World Scanner initialized - scanning chunks as they load...")
-    }
 
     private fun handleChunkLoad(chunk: LevelChunk) {
         val mutablePos = BlockPos.MutableBlockPos()

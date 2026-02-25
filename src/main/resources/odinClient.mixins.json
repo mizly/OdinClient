@@ -2,12 +2,7 @@
   "required": false,
   "package": "starred.skies.odin.mixin",
   "compatibilityLevel": "JAVA_21",
-  "mixins": [
-    "accessors.InventoryAccessor",
-    "accessors.KeyMappingAccessor",
-    "accessors.PuzzleSolversAccessor",
-    "accessors.ClientPacketListenerAccessor"
-  ],
+  "mixins": [],
   "injectors": {
     "defaultRequire": 1
   }
