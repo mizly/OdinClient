@@ -12,6 +12,7 @@ import com.odtheking.odin.events.core.on
 import com.odtheking.odin.features.Module
 import com.odtheking.odin.utils.Color
 import com.odtheking.odin.utils.Colors
+import com.odtheking.odin.utils.noControlCodes
 import com.odtheking.odin.utils.render.drawStyledBox
 import com.odtheking.odin.utils.renderBoundingBox
 import com.odtheking.odin.utils.skyblock.dungeon.DungeonUtils
@@ -61,7 +62,7 @@ object Highlight : Module(
             for (stand in world.entitiesForRendering()) {
                 if (stand !is ArmorStand || !stand.isAlive) continue
 
-                val rawName = stand.name?.string ?: continue
+                val rawName = stand.displayName?.string?.noControlCodes?.takeIf { !it.equals("armor stand", true)} ?: continue
                 val nameLower = rawName.lowercase()
 
                 if (bool && dungeonMobSpawns.any(rawName::contains)) {
@@ -72,7 +73,7 @@ object Highlight : Module(
 
                 if (bool0) {
                     val match = highlightMap.entries.firstOrNull { nameLower.contains(it.key) } ?: continue
-                    stand.fn()?.let { customEntities[it] = match.value }
+                    stand.fn(true)?.let { customEntities[it] = match.value }
                 }
             }
         }
@@ -98,15 +99,22 @@ object Highlight : Module(
         }
     }
 
-    private fun ArmorStand.fn(): Entity? =
-        mc.level?.getEntities(this, boundingBox.move(0.0, -1.0, 0.0), ::isValidEntity)?.firstOrNull()
+    private fun ArmorStand.fn(vis: Boolean = false): Entity? {
+        val a = mc.level
+            ?.getEntities(this, boundingBox.inflate(0.0, 1.0, 0.0)) { isValidEntity(it, vis) }
+            ?.firstOrNull()
 
-    private fun isValidEntity(entity: Entity): Boolean =
+        if (a != null) return a
+
+        return mc.level?.getEntity(id - 1)?.takeIf { isValidEntity(it, vis) }
+    }
+
+    private fun isValidEntity(entity: Entity, vis: Boolean = false): Boolean =
         when (entity) {
             is ArmorStand -> false
             is WitherBoss -> false
             is Player -> entity.uuid.version() == 2 && entity != mc.player
-            else -> entity is EnderMan || !entity.isInvisible
+            else -> entity is EnderMan || (vis || !entity.isInvisible)
         }
 
     @JvmStatic
