@@ -31,7 +31,7 @@ object OdinClient : ClientModInitializer {
     private val modulesToRegister: Array<Module> = arrayOf(
         CloseChest, DungeonAbilities, FuckDiorite, SecretHitboxes, BreakerHelper, KeyHighlight, LividSolver, SpiritBear, TriggerBot,
         Highlight, AutoClicker, Gloomlock, EscrowFix, AutoGFS, QueueTerms, AutoTerms, Trajectories, AutoSell, SimonSays, InventoryWalk,
-        FarmKeys, AutoExperiments, EtherwarpHelper, DoorESP, CancelInteract, CheaterWardrobe
+        FarmKeys, AutoExperiments, EtherwarpHelper, DoorESP, CancelInteract, WorldScanner, AutoDojo, CheaterWardrobe
     )
 
     private val mainFile: Scribble = Scribble("main")
@@ -50,6 +50,7 @@ object OdinClient : ClientModInitializer {
 
         ModuleManager.registerModules(moduleConfig, *modulesToRegister)
         EventBus.subscribe(UpdateNotifier)
+        EventBus.subscribe(AutoDojo)
 
         ClientPlayConnectionEvents.JOIN.register { _, _, _ ->
             for (fn in joinListeners.toList()) fn.invoke()

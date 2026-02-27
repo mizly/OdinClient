@@ -73,7 +73,7 @@ object Highlight : Module(
 
                 if (bool0) {
                     val match = highlightMap.entries.firstOrNull { nameLower.contains(it.key) } ?: continue
-                    stand.fn()?.let { customEntities[it] = match.value }
+                    stand.fn(true)?.let { customEntities[it] = match.value }
                 }
             }
         }
@@ -99,15 +99,22 @@ object Highlight : Module(
         }
     }
 
-    private fun ArmorStand.fn(): Entity? =
-        mc.level?.getEntities(this, boundingBox.inflate(0.0, 1.0, 0.0), ::isValidEntity)?.firstOrNull() ?: mc.level?.getEntity(id - 1)?.takeIf { isValidEntity(it) }
+    private fun ArmorStand.fn(vis: Boolean = false): Entity? {
+        val a = mc.level
+            ?.getEntities(this, boundingBox.inflate(0.0, 1.0, 0.0)) { isValidEntity(it, vis) }
+            ?.firstOrNull()
 
-    private fun isValidEntity(entity: Entity): Boolean =
+        if (a != null) return a
+
+        return mc.level?.getEntity(id - 1)?.takeIf { isValidEntity(it, vis) }
+    }
+
+    private fun isValidEntity(entity: Entity, vis: Boolean = false): Boolean =
         when (entity) {
             is ArmorStand -> false
             is WitherBoss -> false
             is Player -> entity.uuid.version() == 2 && entity != mc.player
-            else -> entity is EnderMan || !entity.isInvisible
+            else -> entity is EnderMan || (vis || !entity.isInvisible)
         }
 
     @JvmStatic
