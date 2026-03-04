@@ -142,7 +142,10 @@ object CheaterWardrobe : Module(
             mc.options.keyUp,
             mc.options.keyLeft,
             mc.options.keyRight,
-            mc.options.keyDown
+            mc.options.keyDown,
+            mc.options.keyJump,
+            mc.options.keySprint,
+            mc.options.keyShift
         ).any { key ->
             val v = (key as KeyMappingAccessor).boundKey.value
             if (v > 7) InputConstants.isKeyDown(w, v)
